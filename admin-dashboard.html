@@ -235,26 +235,11 @@
     </style> -->
 </head>
 <body>
-    <!-- Hiệu ứng hạt nền -->
-    <div class="particles">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-    </div>
-
-    <!-- Hiệu ứng ánh sáng -->
-    <div class="light-effect"></div>
-    <div class="light-effect"></div>
-    <div class="light-effect"></div>
-
     <div class="overlay" id="sidebarOverlay"></div>
     <div class="dashboard">
         <div class="sidebar" id="sidebar">
             <div class="logo">
-                <h2>Admin Dashboard</h2>
+                <h2><i class="fas fa-graduation-cap"></i> Admin LMS</h2>
             </div>
             <ul>
                 <li data-page="dashboard" class="active">
@@ -293,26 +278,31 @@
         </div>
     </div>
     
-    <!-- Popup Container -->
-    <div class="popup-container">
-        <!-- Confirmation Popup -->
-        <div class="popup confirmation">
-            <i class="popup-icon fa fa-exclamation-triangle warning"></i>
-            <h3 class="popup-title">Xác nhận</h3>
-            <div class="popup-message">Bạn có chắc chắn muốn thực hiện hành động này không?</div>
+    <!-- Confirmation Popup -->
+    <div class="popup-container" id="confirmationPopup">
+        <div class="popup">
+            <div class="popup-icon warning">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="popup-title" id="confirmTitle">Xác nhận thao tác</h3>
+            <p class="popup-message" id="confirmMessage">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
             <div class="popup-actions">
-                <button class="popup-btn cancel">Hủy</button>
-                <button class="popup-btn confirm">Xác nhận</button>
+                <button class="popup-btn popup-btn-cancel" id="cancelButton">Hủy</button>
+                <button class="popup-btn popup-btn-confirm" id="confirmButton">Xác nhận</button>
             </div>
         </div>
-        
-        <!-- Notification Popup -->
-        <div class="popup notification">
-            <i class="popup-icon fa fa-info-circle info"></i>
-            <h3 class="popup-title">Thông báo</h3>
-            <div class="popup-message">Thao tác đã hoàn tất thành công.</div>
+    </div>
+    
+    <!-- Notification Popup -->
+    <div class="popup-container" id="notificationPopup">
+        <div class="popup">
+            <div class="popup-icon success" id="notificationIcon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 class="popup-title" id="notificationTitle">Thành công</h3>
+            <p class="popup-message" id="notificationMessage">Thao tác đã được thực hiện thành công!</p>
             <div class="popup-actions">
-                <button class="popup-btn ok">OK</button>
+                <button class="popup-btn popup-btn-ok" id="okButton">OK</button>
             </div>
         </div>
     </div>

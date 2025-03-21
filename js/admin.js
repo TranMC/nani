@@ -315,15 +315,25 @@ class AdminDashboard {
                         <button class="btn-edit" data-id="${student.studentId}">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn-delete" data-id="${student.studentId}">
+                        <button class="btn-delete" data-id="${student.studentId}" 
+                            onclick="console.log('Delete button clicked directly for ID: ${student.studentId}')">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
                 </tr>
             `}).join('');
             
-            // Không thêm event listeners trực tiếp ở đây, sẽ dùng event delegation
-            console.log('Students loaded successfully');
+            // Thêm event listeners trực tiếp cho các nút delete
+            const deleteButtons = tbody.querySelectorAll('.btn-delete');
+            deleteButtons.forEach(button => {
+                const studentId = button.dataset.id;
+                button.addEventListener('click', (e) => {
+                    console.log('Direct event: Delete button clicked for ID:', studentId);
+                    e.stopPropagation(); // Ngăn chặn event bubbling
+                });
+            });
+            
+            console.log('Total delete buttons added:', deleteButtons.length);
         } catch (error) {
             console.error("Error loading students:", error);
         }
@@ -359,14 +369,7 @@ class AdminDashboard {
                     this.openStudentModal(studentId);
                 } else if (target.classList.contains('btn-delete')) {
                     console.log('Delete student:', studentId);
-                    // Lấy thông tin sinh viên từ row
-                    const row = target.closest('tr');
-                    const studentName = row.querySelector('td:nth-child(2)')?.textContent || 'Unknown Student';
-                    const student = {
-                        studentId: studentId,
-                        fullName: studentName
-                    };
-                    this.deleteStudent(student);
+                    this.deleteStudent(studentId);
                 }
                 
                 // Ngăn sự kiện lan ra
@@ -577,22 +580,32 @@ class AdminDashboard {
     }
     
     
-    async deleteStudent(student) {
+    async deleteStudent(studentId) {
+        console.log('deleteStudent called for ID:', studentId);
+        
         try {
-            this.showConfirmation(
+            // Sử dụng phương thức hiển thị popup mạnh hơn
+            this.forceShowConfirmation(
                 'Xác nhận xóa học sinh',
                 'Bạn có chắc chắn muốn xóa học sinh này không? Dữ liệu không thể khôi phục sau khi xóa.',
                 async () => {
+                    console.log('Xác nhận xóa học sinh với ID:', studentId);
                     try {
-                        await this.deleteStudentRequest(student.studentId);
+                        console.log('Bắt đầu gọi API xóa học sinh');
+                        await this.deleteStudentRequest(studentId);
+                        console.log('API xóa học sinh thành công');
+                        
+                        // Cập nhật danh sách học sinh
                         await this.loadStudents();
+                        
+                        // Hiển thị thông báo thành công
                         this.showNotification(
                             'success',
                             'Xóa học sinh thành công',
                             'Học sinh đã được xóa khỏi hệ thống.'
                         );
                     } catch (error) {
-                        console.error('Error deleting student:', error);
+                        console.error('Lỗi chi tiết khi xóa học sinh:', error);
                         this.showNotification(
                             'error',
                             'Lỗi xóa học sinh',
@@ -601,8 +614,25 @@ class AdminDashboard {
                     }
                 }
             );
+            
+            // Kiểm tra trạng thái popup sau khi hiển thị
+            setTimeout(() => {
+                this.checkPopupStatus();
+            }, 100);
+            
         } catch (error) {
-            console.error('Error in deleteStudent method:', error);
+            console.error('Lỗi trong phương thức deleteStudent:', error);
+            // Sử dụng xác nhận thông thường nếu có lỗi với popup
+            if (window.confirm('Bạn có chắc chắn muốn xóa học sinh này không? Dữ liệu không thể khôi phục sau khi xóa.')) {
+                try {
+                    await this.deleteStudentRequest(studentId);
+                    await this.loadStudents();
+                    alert('Xóa học sinh thành công!');
+                } catch (error) {
+                    console.error('Lỗi khi xóa học sinh (fallback):', error);
+                    alert('Lỗi xóa học sinh. Vui lòng thử lại sau.');
+                }
+            }
         }
     }
 
@@ -965,8 +995,8 @@ class AdminDashboard {
                                 <i class="fas fa-trash"></i>
                             </button>
                             <button class="btn-print" data-id="${co.cohortId}">
-                                <i class="fas fa-print"></i> In
-                            </button>
+                            <i class="fas fa-print"></i> Print
+                        </button>
                         </td>
                     </tr>
                 `;
@@ -2186,431 +2216,603 @@ class AdminDashboard {
      * @param {Function} onConfirm - Hàm callback khi người dùng xác nhận
      */
     showConfirmation(title, message, onConfirm) {
-        // Sử dụng phương thức forceShowConfirmation để đảm bảo tính nhất quán
-        this.forceShowConfirmation(title, message, onConfirm, null, "warning");
+        console.log('showConfirmation called:', title, message);
+        
+        // Đảm bảo popup hiển thị đúng
+        this.ensurePopupsExist();
+        
+        const confirmationPopup = document.getElementById('confirmationPopup');
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmMessage = document.getElementById('confirmMessage');
+        const confirmButton = document.getElementById('confirmButton');
+        const cancelButton = document.getElementById('cancelButton');
+        
+        // Kiểm tra xem các phần tử có tồn tại
+        if (!confirmationPopup || !confirmTitle || !confirmMessage || !confirmButton) {
+            console.error('Không tìm thấy các phần tử popup xác nhận:', { 
+                confirmationPopup, confirmTitle, confirmMessage, confirmButton 
+            });
+            
+            // Nếu không tìm thấy popup, dùng confirm thông thường
+            if (window.confirm(message)) {
+                if (typeof onConfirm === 'function') {
+                    onConfirm();
+                }
+            }
+            return;
+        }
+        
+            // Cập nhật nội dung
+            confirmTitle.textContent = title || 'Xác nhận thao tác';
+            confirmMessage.textContent = message || 'Bạn có chắc chắn muốn thực hiện thao tác này?';
+            
+            // Xóa sự kiện click cũ
+            const newConfirmButton = confirmButton.cloneNode(true);
+            confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
+            
+            // Thêm sự kiện click mới
+            newConfirmButton.addEventListener('click', () => {
+            console.log('Confirm button clicked');
+                this.hideConfirmation();
+                if (typeof onConfirm === 'function') {
+                    onConfirm();
+                }
+            });
+            
+        // Xử lý sự kiện hủy
+        if (cancelButton) {
+            const newCancelButton = cancelButton.cloneNode(true);
+            cancelButton.parentNode.replaceChild(newCancelButton, cancelButton);
+            
+            newCancelButton.addEventListener('click', () => {
+                console.log('Cancel button clicked');
+                this.hideConfirmation();
+            });
+        }
+        
+        // Áp dụng style trực tiếp để đảm bảo hiển thị
+        confirmationPopup.style.display = 'flex';
+        confirmationPopup.style.opacity = '1';
+        confirmationPopup.style.visibility = 'visible';
+        confirmationPopup.style.zIndex = '9999';
+            confirmationPopup.classList.add('show');
+        
+        // Debug thêm thông tin style
+        console.log('Popup confirmation displayed with styles:', {
+            display: window.getComputedStyle(confirmationPopup).display,
+            opacity: window.getComputedStyle(confirmationPopup).opacity,
+            visibility: window.getComputedStyle(confirmationPopup).visibility,
+            zIndex: window.getComputedStyle(confirmationPopup).zIndex
+        });
     }
 
     /**
      * Ẩn popup xác nhận
      */
     hideConfirmation() {
-        try {
-            const popup = document.querySelector('.popup.confirmation');
-            const popupContainer = document.querySelector('.popup-container');
+        console.log('hideConfirmation called');
+        const confirmationPopup = document.getElementById('confirmationPopup');
+        if (confirmationPopup) {
+            // Xóa bỏ class và inline styles
+            confirmationPopup.classList.remove('show');
+            confirmationPopup.style.opacity = '0';
+            confirmationPopup.style.visibility = 'hidden';
             
-            if (!popup || !popupContainer) {
-                console.error("Popup elements not found");
-                return;
-            }
-            
-            // Đảm bảo tất cả các event listener được vô hiệu hóa bằng cách vô hiệu hóa các nút
-            const confirmButton = popup.querySelector('.popup-btn.confirm');
-            const cancelButton = popup.querySelector('.popup-btn.cancel');
-            
-            if (confirmButton) {
-                confirmButton.disabled = true;
-            }
-            
-            if (cancelButton) {
-                cancelButton.disabled = true;
-            }
-            
-            // Ẩn popup
-            popup.classList.remove('show', 'active');
-            popup.style.opacity = '0';
-            popup.style.visibility = 'hidden';
-            
-            // Ẩn container 
-            popupContainer.style.opacity = '0';
-            popupContainer.style.visibility = 'hidden';
-            
-            // Ẩn hoàn toàn các phần tử sau khi animation hoàn tất
+            // Đợi animation hoàn tất trước khi ẩn hoàn toàn
             setTimeout(() => {
-                popupContainer.style.display = 'none';
-                popup.style.display = 'none';
-                
-                // Đặt lại trạng thái các nút
-                if (confirmButton) confirmButton.disabled = false;
-                if (cancelButton) cancelButton.disabled = false;
-            }, 300); // Thời gian animation
-            
-        } catch (error) {
-            console.error("Error hiding confirmation:", error);
+                confirmationPopup.style.display = 'none';
+            }, 300);
+            console.log('Popup confirmation hidden');
+        } else {
+            console.error('Không tìm thấy phần tử confirmationPopup');
         }
     }
 
     /**
      * Hiển thị popup thông báo
+     * @param {string} type - Loại thông báo: success, error, warning, info
      * @param {string} title - Tiêu đề thông báo
      * @param {string} message - Nội dung thông báo
-     * @param {string} type - Loại thông báo: success, error, warning, info
+     * @param {Function} callback - Hàm callback khi đóng thông báo (optional)
      */
-    showNotification(title, message, type = "info") {
-        try {
-            const popupContainer = document.querySelector('.popup-container');
-            const popup = document.querySelector('.popup.notification');
+    showNotification(type, title, message, callback) {
+        console.log('showNotification called:', type, title, message);
+        
+        // Đảm bảo popup tồn tại
+        this.ensurePopupsExist();
+        
+        const notificationPopup = document.getElementById('notificationPopup');
+        const notificationIcon = document.getElementById('notificationIcon');
+        const notificationTitle = document.getElementById('notificationTitle');
+        const notificationMessage = document.getElementById('notificationMessage');
+        const okButton = document.getElementById('okButton');
+        
+        if (!notificationPopup || !notificationTitle || !notificationMessage || !okButton) {
+            console.error('Không tìm thấy các phần tử popup thông báo');
+            // Fallback to alert if popup elements don't exist
+            alert(`${title}: ${message}`);
+            if (typeof callback === 'function') {
+                callback();
+            }
+            return;
+        }
+        
+            // Cập nhật icon theo loại thông báo
+        if (notificationIcon) {
+            notificationIcon.className = 'popup-icon ' + (type || 'success');
             
-            if (!popupContainer || !popup) {
-                console.error("Notification popup elements not found");
-                return;
+            // Cập nhật icon
+            const iconElement = notificationIcon.querySelector('i');
+            if (iconElement) {
+                switch(type) {
+                    case 'error':
+                        iconElement.className = 'fas fa-times-circle';
+                        break;
+                    case 'warning':
+                        iconElement.className = 'fas fa-exclamation-triangle';
+                        break;
+                    case 'info':
+                        iconElement.className = 'fas fa-info-circle';
+                        break;
+                    default: // success
+                        iconElement.className = 'fas fa-check-circle';
+                }
+                }
             }
             
             // Cập nhật nội dung
-            const popupTitle = popup.querySelector('.popup-title');
-            const popupMessage = popup.querySelector('.popup-message');
-            const popupIcon = popup.querySelector('.popup-icon') || document.createElement('i');
+            notificationTitle.textContent = title || 'Thông báo';
+            notificationMessage.textContent = message || 'Thao tác đã hoàn tất.';
             
-            // Nếu không có sẵn biểu tượng, thêm vào
-            if (!popup.querySelector('.popup-icon')) {
-                popupIcon.className = 'popup-icon fa fa-info-circle';
-                popup.insertBefore(popupIcon, popupTitle);
-            }
+            // Xóa sự kiện click cũ
+            const newOkButton = okButton.cloneNode(true);
+            okButton.parentNode.replaceChild(newOkButton, okButton);
             
-            // Cập nhật biểu tượng dựa trên loại thông báo
-            popupIcon.className = 'popup-icon';
+            // Thêm sự kiện click mới
+            newOkButton.addEventListener('click', () => {
+            console.log('OK button clicked');
+                this.hideNotification();
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            });
             
-            switch (type) {
-                case 'success':
-                    popupIcon.className += ' fa fa-check-circle success';
-                    break;
-                case 'error':
-                    popupIcon.className += ' fa fa-times-circle error';
-                    break;
-                case 'warning':
-                    popupIcon.className += ' fa fa-exclamation-triangle warning';
-                    break;
-                default:
-                    popupIcon.className += ' fa fa-info-circle info';
-                    break;
-            }
-            
-            if (popupTitle) popupTitle.textContent = title;
-            if (popupMessage) popupMessage.innerHTML = message;
-            
-            // Xóa tất cả event listeners trên nút OK bằng cách thay thế nút
-            const btnContainer = popup.querySelector('.popup-actions');
-            const oldBtnOk = popup.querySelector('.popup-btn.ok');
-            
-            if (oldBtnOk && btnContainer) {
-                const newBtnOk = document.createElement('button');
-                newBtnOk.className = 'popup-btn ok';
-                newBtnOk.textContent = 'OK';
-                
-                btnContainer.replaceChild(newBtnOk, oldBtnOk);
-                
-                // Thêm event listener mới
-                newBtnOk.addEventListener('click', () => {
-                    this.hideNotification();
-                });
-            } else {
-                console.error("OK button not found in notification popup");
-                return;
-            }
-            
-            // Đầu tiên đảm bảo popup đã ẩn hoàn toàn
-            popup.classList.remove('show', 'active');
-            popup.style.display = 'none';
-            popup.style.opacity = '0';
-            popup.style.visibility = 'hidden';
-            
-            // Đảm bảo container cũng đã ẩn
-            popupContainer.style.display = 'none';
-            popupContainer.style.opacity = '0';
-            popupContainer.style.visibility = 'hidden';
-            
-            // Hiển thị popup sau một khoảng thời gian ngắn
-            setTimeout(() => {
-                // Hiển thị container
-                popupContainer.style.display = 'flex';
-                popupContainer.style.opacity = '1';
-                popupContainer.style.visibility = 'visible';
-                
-                // Hiển thị popup
-                popup.style.display = 'block';
-                popup.style.opacity = '1';
-                popup.style.visibility = 'visible';
-                popup.classList.add('show', 'active');
-                
-                console.log("Notification shown successfully");
-            }, 100);
-            
-        } catch (error) {
-            console.error("Error showing notification:", error);
-        }
+        // Áp dụng style trực tiếp để đảm bảo hiển thị
+        notificationPopup.style.display = 'flex';
+        notificationPopup.style.opacity = '1';
+        notificationPopup.style.visibility = 'visible';
+        notificationPopup.style.zIndex = '9999';
+            notificationPopup.classList.add('show');
+        
+        console.log('Popup notification displayed with styles:', {
+            display: window.getComputedStyle(notificationPopup).display,
+            opacity: window.getComputedStyle(notificationPopup).opacity,
+            visibility: window.getComputedStyle(notificationPopup).visibility,
+            zIndex: window.getComputedStyle(notificationPopup).zIndex
+        });
     }
 
     /**
      * Ẩn popup thông báo
      */
     hideNotification() {
-        try {
-            const popup = document.querySelector('.popup.notification');
-            const popupContainer = document.querySelector('.popup-container');
+        console.log('hideNotification called');
+        const notificationPopup = document.getElementById('notificationPopup');
+        if (notificationPopup) {
+            // Xóa bỏ class và inline styles
+            notificationPopup.classList.remove('show');
+            notificationPopup.style.opacity = '0';
+            notificationPopup.style.visibility = 'hidden';
             
-            if (!popup || !popupContainer) {
-                console.error("Notification popup elements not found");
-                return;
-            }
-            
-            // Vô hiệu hóa nút OK
-            const okButton = popup.querySelector('.popup-btn.ok');
-            if (okButton) {
-                okButton.disabled = true;
-            }
-            
-            // Ẩn popup
-            popup.classList.remove('show', 'active');
-            popup.style.opacity = '0';
-            popup.style.visibility = 'hidden';
-            
-            // Ẩn container
-            popupContainer.style.opacity = '0';
-            popupContainer.style.visibility = 'hidden';
-            
-            // Ẩn hoàn toàn các phần tử sau khi animation hoàn tất
+            // Đợi animation hoàn tất trước khi ẩn hoàn toàn
             setTimeout(() => {
-                popupContainer.style.display = 'none';
-                popup.style.display = 'none';
-                
-                // Đặt lại trạng thái nút
-                if (okButton) okButton.disabled = false;
-            }, 300); // Thời gian animation
-            
-        } catch (error) {
-            console.error("Error hiding notification:", error);
+                notificationPopup.style.display = 'none';
+            }, 300);
+            console.log('Popup notification hidden');
+        } else {
+            console.error('Không tìm thấy phần tử notificationPopup');
         }
     }
 
-    deleteStudent(student) {
-        try {
-            const studentId = student.studentId;
-            const studentName = student.fullName;
-            
-            // Kiểm tra tham số
-            if (!studentId || !studentName) {
-                console.error("Missing studentId or name in deleteStudent method");
-                this.showNotification("Lỗi", "Không thể nhận dạng sinh viên để xóa", "error");
-                return;
-            }
-            
-            // Chuẩn bị nội dung xác nhận
-            const title = "Xác nhận xóa sinh viên";
-            const message = `Bạn có chắc chắn muốn xóa sinh viên <strong>${studentName}</strong>?<br>Hành động này không thể hoàn tác.`;
-            
-            // Thiết lập callback cho hành động xác nhận
-            const confirmCallback = async () => {
-                try {
-                    this.showLoader();
-                    await this.deleteStudentRequest(studentId);
-                    this.hideLoader();
-                    this.showNotification("Thành công", `Đã xóa sinh viên ${studentName} thành công`, "success");
-                    this.loadStudents(); // Tải lại danh sách
-                } catch (error) {
-                    console.error("Error deleting student:", error);
-                    this.hideLoader();
-                    this.showNotification("Lỗi", "Đã xảy ra lỗi khi xóa sinh viên", "error");
-                }
-            };
-            
-            // Hiển thị hộp thoại xác nhận với biểu tượng cảnh báo
-            this.forceShowConfirmation(title, message, confirmCallback, null, "warning");
-        } catch (error) {
-            console.error("Error in deleteStudent method:", error);
-            this.showNotification("Lỗi hệ thống", "Đã xảy ra lỗi không mong muốn", "error");
-        }
+    // Thêm phương thức saveStudentRequest
+    async saveStudentRequest(studentData) {
+        const params = new URLSearchParams({
+            id: studentData.studentId || "",  
+            FName: studentData.firstName,
+            LName: studentData.lastName,
+            email: studentData.email,
+            gender: studentData.gender,
+            address: studentData.address,
+            dob: studentData.dob,
+            phone: studentData.phone,
+            password: studentData.password,
+            cohortId: studentData.cohortId
+        });
+
+        const isUpdating = Boolean(studentData.studentId);
+        const url = isUpdating
+            ? `https://scoreapi-1zqy.onrender.com/RealAdmins/UpdateStudent?${params}`
+            : `https://scoreapi-1zqy.onrender.com/RealAdmins/InsertStudent?${params}`;
+
+        const method = isUpdating ? "PUT" : "POST";
+
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) throw new Error(`Failed to ${isUpdating ? "update" : "create"} student`);
+        
+        return response.json();
     }
 
-    // Thêm phương thức deleteStudentRequest
+    // Thêm phương thức deleteStudentRequest 
     async deleteStudentRequest(studentId) {
-        const response = await fetch(`${this.apiBaseUrl}/DeleteStudent?id=${studentId}`, {
+        console.log('Bắt đầu xóa học sinh với ID:', studentId);
+        const url = `https://scoreapi-1zqy.onrender.com/RealAdmins/DeleteStudent?id=${studentId}`;
+        console.log('URL API xóa học sinh:', url);
+        
+        try {
+            const response = await fetch(url, {
             method: 'DELETE',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.authToken}`
+                'Content-Type': 'application/json'
             }
         });
+            
+            console.log('Kết quả API xóa học sinh:', {
+                status: response.status,
+                statusText: response.statusText
+        });
+
+        if (!response.ok) {
+                let errorMessage = `Lỗi xóa học sinh: ${response.status} ${response.statusText}`;
+                
+                try {
+            const errorData = await response.json();
+                    console.error('Chi tiết lỗi từ API:', errorData);
+                    errorMessage = errorData.message || errorMessage;
+                } catch (jsonError) {
+                    console.error('Không thể đọc phản hồi lỗi dưới dạng JSON:', jsonError);
+        }
         
+                throw new Error(errorMessage);
+            }
+            
+            console.log('Xóa học sinh thành công');
+        return true;
+        } catch (error) {
+            console.error('Lỗi trong deleteStudentRequest:', error);
+            throw error;
+        }
+    }
+
+    // Thêm phương thức saveTeacherRequest
+    async saveTeacherRequest(teacherData) {
+        const params = new URLSearchParams({
+            id: teacherData.teacherId || "",  
+            FName: teacherData.firstName,
+            LName: teacherData.lastName,
+            email: teacherData.email,
+            gender: teacherData.gender,
+            phone: teacherData.phone,        
+            address: teacherData.address,
+            dob: teacherData.dob,
+            password: teacherData.password,
+        });
+
+        const isUpdating = Boolean(teacherData.teacherId);
+        const url = isUpdating
+            ? `https://scoreapi-1zqy.onrender.com/RealAdmins/UpdateTeacher?${params}`
+            : `https://scoreapi-1zqy.onrender.com/RealAdmins/InsertTeacher?${params}`;
+
+        const method = isUpdating ? "PUT" : "POST";
+
+        const response = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) throw new Error(`Failed to ${isUpdating ? "update" : "create"} teacher`);
+        
+        return response.json();
+    }
+
+    // Giữ lại phương thức này và xóa bỏ phương thức trùng lặp sau đó
+    async deleteTeacherRequest(teacherId) {
+        const response = await fetch(`https://scoreapi-1zqy.onrender.com/RealAdmins/DeleteTeacher?id=${teacherId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Lỗi không xác định');
+            throw new Error(errorData.message || `Lỗi xóa giáo viên: ${response.status}`);
         }
         
-        return await response.json();
+        return true;
     }
 
-    // Phương thức hiển thị popup trực tiếp không thông qua animation
-    forceShowConfirmation(title, message, confirmCallback, cancelCallback = null, iconType = "warning") {
-        try {
-            // Lấy các phần tử DOM
-            const popupContainer = document.querySelector('.popup-container');
-            const popup = document.querySelector('.popup.confirmation');
-            
-            if (!popupContainer || !popup) {
-                console.error("Popup elements not found");
-                return;
-            }
-            
-            // Cập nhật nội dung popup
-            const popupTitle = popup.querySelector('.popup-title');
-            const popupMessage = popup.querySelector('.popup-message');
-            const popupIcon = popup.querySelector('.popup-icon') || document.createElement('i');
-            
-            // Nếu không có sẵn biểu tượng, thêm vào
-            if (!popup.querySelector('.popup-icon')) {
-                popupIcon.className = 'popup-icon fa fa-exclamation-triangle';
-                popup.insertBefore(popupIcon, popupTitle);
-            }
-            
-            // Thêm lớp kiểu cho biểu tượng (success, error, warning, info)
-            popupIcon.className = 'popup-icon fa fa-exclamation-triangle ' + iconType;
-            
-            if (popupTitle) popupTitle.textContent = title;
-            if (popupMessage) popupMessage.innerHTML = message;
-            
-            // Xóa tất cả event listeners hiện có trên các nút bằng cách thay thế
-            const btnContainer = popup.querySelector('.popup-actions');
-            const oldBtnConfirm = popup.querySelector('.popup-btn.confirm');
-            const oldBtnCancel = popup.querySelector('.popup-btn.cancel');
-            
-            // Tạo nút mới để thay thế
-            const newBtnConfirm = document.createElement('button');
-            newBtnConfirm.className = 'popup-btn confirm';
-            newBtnConfirm.textContent = 'Xác nhận';
-            
-            const newBtnCancel = document.createElement('button');
-            newBtnCancel.className = 'popup-btn cancel';
-            newBtnCancel.textContent = 'Hủy';
-            
-            // Thay thế các nút cũ
-            if (oldBtnConfirm && oldBtnCancel && btnContainer) {
-                btnContainer.replaceChild(newBtnConfirm, oldBtnConfirm);
-                btnContainer.replaceChild(newBtnCancel, oldBtnCancel);
-                
-                // Thêm event listener mới
-                newBtnConfirm.addEventListener('click', () => {
-                    this.hideConfirmation();
-                    if (typeof confirmCallback === 'function') {
-                        confirmCallback();
-                    }
-                });
-                
-                newBtnCancel.addEventListener('click', () => {
-                    this.hideConfirmation();
-                    if (typeof cancelCallback === 'function') {
-                        cancelCallback();
-                    }
-                });
-            } else {
-                console.error("Buttons not found in popup");
-                return;
-            }
-            
-            // Trước khi hiển thị, đảm bảo popup không hiển thị
-            // Ngăn chặn việc tự động kích hoạt các button
-            popup.classList.remove('show', 'active');
-            popup.style.display = 'none';
-            popup.style.opacity = '0';
-            popup.style.visibility = 'hidden';
-            
-            // Đảm bảo container cũng đã ẩn
-            popupContainer.style.display = 'none';
-            popupContainer.style.opacity = '0';
-            popupContainer.style.visibility = 'hidden';
-            
-            // Hiển thị popup sau một khoảng thời gian ngắn
-            setTimeout(() => {
-                // Hiển thị container
-                popupContainer.style.display = 'flex';
-                popupContainer.style.opacity = '1';
-                popupContainer.style.visibility = 'visible';
-                
-                // Hiển thị popup
-                popup.style.display = 'block';
-                popup.style.opacity = '1';
-                popup.style.visibility = 'visible';
-                popup.classList.add('show', 'active');
-                
-                console.log("Popup shown successfully");
-            }, 100);
-            
-        } catch (error) {
-            console.error("Error showing confirmation:", error);
-        }
-    }
-
-    // Kiểm tra và đảm bảo những popup cần thiết đã tồn tại trong DOM
+    // Kiểm tra và thêm các popup nếu chưa tồn tại
     ensurePopupsExist() {
-        // Kiểm tra popup container
-        if (!document.querySelector('.popup-container')) {
-            console.warn("Popup container not found, no action needed as it's already in HTML");
+        console.log('Checking if popups exist...');
+        
+        // Kiểm tra popup xác nhận
+        if (!document.getElementById('confirmationPopup')) {
+            console.log('Adding confirmation popup to the DOM');
+            const confirmationHTML = `
+                <div id="confirmationPopup" class="popup-overlay">
+                    <div class="popup-content">
+                        <div class="popup-header">
+                            <h3 id="confirmTitle">Xác nhận thao tác</h3>
+                            <button class="popup-close">&times;</button>
+                        </div>
+                        <div class="popup-body">
+                            <p id="confirmMessage">Bạn có chắc chắn muốn thực hiện thao tác này?</p>
+                        </div>
+                        <div class="popup-footer">
+                            <button id="confirmButton" class="btn-confirm">Xác nhận</button>
+                            <button id="cancelButton" class="btn-cancel">Hủy bỏ</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', confirmationHTML);
+            
+            // Thêm style cho popup với !important để đảm bảo không bị ghi đè
+            if (!document.getElementById('popupStyles')) {
+                const popupStyles = `
+                    <style id="popupStyles">
+                        .popup-overlay {
+                            display: none;
+                            position: fixed !important;
+                            top: 0 !important;
+                            left: 0 !important;
+                            width: 100% !important;
+                            height: 100% !important;
+                            background-color: rgba(0, 0, 0, 0.7) !important;
+                            z-index: 99999 !important;
+                            justify-content: center !important;
+                            align-items: center !important;
+                            opacity: 0;
+                            transition: opacity 0.3s ease;
+                        }
+                        .popup-overlay.show {
+                            opacity: 1 !important;
+                            display: flex !important;
+                            visibility: visible !important;
+                        }
+                        .popup-content {
+                            background-color: white !important;
+                            border-radius: 5px !important;
+                            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+                            width: 400px !important;
+                            max-width: 90% !important;
+                            margin: auto !important;
+                            animation: popIn 0.3s ease !important;
+                            position: relative !important;
+                            z-index: 100000 !important;
+                        }
+                        @keyframes popIn {
+                            0% { transform: scale(0.5); opacity: 0; }
+                            100% { transform: scale(1); opacity: 1; }
+                        }
+                        .popup-header {
+                            display: flex !important;
+                            justify-content: space-between !important;
+                            align-items: center !important;
+                            padding: 15px 20px !important;
+                            border-bottom: 1px solid #eee !important;
+                            background-color: #f8f9fa !important;
+                            border-radius: 5px 5px 0 0 !important;
+                        }
+                        .popup-body {
+                            padding: 20px !important;
+                        }
+                        .popup-footer {
+                            padding: 15px 20px !important;
+                            border-top: 1px solid #eee !important;
+                            display: flex !important;
+                            justify-content: flex-end !important;
+                            gap: 10px !important;
+                            background-color: #f8f9fa !important;
+                            border-radius: 0 0 5px 5px !important;
+                        }
+                        .btn-confirm {
+                            background-color: #4B91F1 !important;
+                            color: white !important;
+                            border: none !important;
+                            padding: 8px 15px !important;
+                            border-radius: 4px !important;
+                            cursor: pointer !important;
+                            font-weight: bold !important;
+                        }
+                        .btn-confirm:hover {
+                            background-color: #3a7bd5 !important;
+                        }
+                        .btn-cancel {
+                            background-color: #6c757d !important;
+                            color: white !important;
+                            border: none !important;
+                            padding: 8px 15px !important;
+                            border-radius: 4px !important;
+                            cursor: pointer !important;
+                        }
+                        .btn-cancel:hover {
+                            background-color: #5a6268 !important;
+                        }
+                        .popup-close {
+                            background: none !important;
+                            border: none !important;
+                            font-size: 24px !important;
+                            cursor: pointer !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            line-height: 1 !important;
+                        }
+                        
+                        /* Thêm style cho icon */
+                        .popup-icon {
+                            display: flex !important;
+                            justify-content: center !important;
+                            margin-bottom: 15px !important;
+                            font-size: 32px !important;
+                        }
+                        .popup-icon.success i { color: #28a745 !important; }
+                        .popup-icon.error i { color: #dc3545 !important; }
+                        .popup-icon.warning i { color: #ffc107 !important; }
+                        .popup-icon.info i { color: #17a2b8 !important; }
+                    </style>
+                `;
+                document.head.insertAdjacentHTML('beforeend', popupStyles);
+            }
+            
+            // Thêm sự kiện cho nút đóng popup
+            const closeBtn = document.querySelector('#confirmationPopup .popup-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    this.hideConfirmation();
+                });
+            }
         }
         
-        // Kiểm tra các popup cụ thể
-        if (!document.querySelector('.popup.confirmation') || !document.querySelector('.popup.notification')) {
-            console.warn("Popup elements not found, but should be present in HTML");
+        // Kiểm tra popup thông báo
+        if (!document.getElementById('notificationPopup')) {
+            console.log('Adding notification popup to the DOM');
+            const notificationHTML = `
+                <div id="notificationPopup" class="popup-overlay">
+                    <div class="popup-content">
+                        <div class="popup-header">
+                            <h3 id="notificationTitle">Thông báo</h3>
+                            <button class="popup-close">&times;</button>
+                        </div>
+                        <div class="popup-body">
+                            <div class="popup-icon success" id="notificationIcon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <p id="notificationMessage">Thao tác đã hoàn tất.</p>
+                        </div>
+                        <div class="popup-footer">
+                            <button id="okButton" class="btn-confirm">OK</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', notificationHTML);
+            
+            // Thêm sự kiện cho nút đóng popup
+            const closeBtn = document.querySelector('#notificationPopup .popup-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    this.hideNotification();
+                });
+            }
         }
+        
+        console.log('Popup check completed');
     }
 
-    // Hiển thị loader
-    showLoader() {
-        const loaderHtml = `
-            <div id="app-loader" style="position:fixed; top:0; left:0; width:100%; height:100%; 
-            background:rgba(0,0,0,0.5); z-index:9999; display:flex; justify-content:center; align-items:center;">
-                <div style="width:60px; height:60px; border:6px solid rgba(255,255,255,0.3); 
-                border-radius:50%; border-top-color:#fff; animation:spin 1s linear infinite;"></div>
-            </div>
+    // Thêm phương thức kiểm tra trạng thái popup
+    checkPopupStatus() {
+        console.log('Checking popup status...');
+        
+        const confirmationPopup = document.getElementById('confirmationPopup');
+        const notificationPopup = document.getElementById('notificationPopup');
+        
+        if (confirmationPopup) {
+            const style = window.getComputedStyle(confirmationPopup);
+            console.log('Confirmation popup status:', {
+                exists: true,
+                display: style.display,
+                opacity: style.opacity,
+                visibility: style.visibility,
+                zIndex: style.zIndex,
+                hasClassShow: confirmationPopup.classList.contains('show')
+            });
+        } else {
+            console.log('Confirmation popup does not exist');
+        }
+        
+        if (notificationPopup) {
+            const style = window.getComputedStyle(notificationPopup);
+            console.log('Notification popup status:', {
+                exists: true,
+                display: style.display,
+                opacity: style.opacity,
+                visibility: style.visibility,
+                zIndex: style.zIndex,
+                hasClassShow: notificationPopup.classList.contains('show')
+            });
+        } else {
+            console.log('Notification popup does not exist');
+        }
+    }
+    
+    // Phương thức hiển thị popup trực tiếp không thông qua animation
+    forceShowConfirmation(title, message, onConfirm) {
+        console.log('forceShowConfirmation called');
+        
+        // Đảm bảo popup tồn tại
+        this.ensurePopupsExist();
+        
+        // Lấy tham chiếu đến các phần tử popup
+        const popup = document.getElementById('confirmationPopup');
+        const titleEl = document.getElementById('confirmTitle');
+        const messageEl = document.getElementById('confirmMessage');
+        const confirmBtn = document.getElementById('confirmButton');
+        const cancelBtn = document.getElementById('cancelButton');
+        
+        if (!popup || !titleEl || !messageEl || !confirmBtn || !cancelBtn) {
+            console.error('Popup elements not found, falling back to confirm');
+            if (window.confirm(message)) {
+                onConfirm();
+            }
+            return;
+        }
+        
+        // Cập nhật nội dung
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        
+        // Tạo các phần tử mới để gắn sự kiện
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        
+        // Gắn sự kiện
+        newConfirmBtn.onclick = () => {
+            console.log('Confirm button clicked (forced)');
+            this.hideConfirmation();
+            onConfirm();
+        };
+        
+        newCancelBtn.onclick = () => {
+            console.log('Cancel button clicked (forced)');
+            this.hideConfirmation();
+        };
+        
+        // Hiển thị popup với style inline trực tiếp
+        popup.style.cssText = `
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            z-index: 99999 !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: rgba(0, 0, 0, 0.7) !important;
         `;
         
-        // Chỉ thêm loader nếu chưa tồn tại
-        if (!document.getElementById('app-loader')) {
-            document.body.insertAdjacentHTML('beforeend', loaderHtml);
-            
-            // Thêm animation keyframes nếu chưa tồn tại
-            if (!document.getElementById('loader-style')) {
-                const styleTag = document.createElement('style');
-                styleTag.id = 'loader-style';
-                styleTag.textContent = `
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                `;
-                document.head.appendChild(styleTag);
-            }
-        }
-    }
-
-    // Ẩn loader
-    hideLoader() {
-        const loader = document.getElementById('app-loader');
-        if (loader) {
-            loader.remove();
-        }
-    }
-
-    // Thêm phương thức checkPopupStatus
-    checkPopupStatus() {
-        const confirmationPopup = document.querySelector('.popup.confirmation');
-        if (confirmationPopup) {
-            console.log('Confirmation popup status:', {
-                display: confirmationPopup.style.display,
-                opacity: confirmationPopup.style.opacity,
-                visibility: confirmationPopup.style.visibility
-            });
-        } else {
-            console.log('Confirmation popup not found');
-        }
-
-        const notificationPopup = document.querySelector('.popup.notification');
-        if (notificationPopup) {
-            console.log('Notification popup status:', {
-                display: notificationPopup.style.display,
-                opacity: notificationPopup.style.opacity,
-                visibility: notificationPopup.style.visibility
-            });
-        } else {
-            console.log('Notification popup not found');
-        }
+        // Log thông tin
+        setTimeout(() => {
+            this.checkPopupStatus();
+        }, 50);
     }
 }
 
