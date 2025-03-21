@@ -1,6 +1,6 @@
 class TeacherScores {
     constructor() {
-        this.apiBaseUrl = 'https://localhost:7231/ScoreTeachers'; // URL cơ sở API
+        this.apiBaseUrl = 'https://scoreapi-1zqy.onrender.com/ScoreTeachers'; // URL cơ sở API
         
         try {
             console.log('Khởi tạo TeacherScores...');

@@ -124,7 +124,7 @@ class TeacherNavigation {
                 try {
                     console.log('Bắt đầu gọi API lấy danh sách môn học...');
                     // Khởi tạo DataService để lấy thông tin môn học
-                    const dataService = new DataService('https://localhost:7231');
+                    const dataService = new DataService('https://scoreapi-1zqy.onrender.com');
                     console.log('Teacher ID:', teacher.teacherId);
                     const subjectsData = await dataService.getTeacherSubjects(teacher.teacherId);
                     console.log('Dữ liệu môn học nhận được:', subjectsData);
