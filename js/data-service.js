@@ -223,7 +223,8 @@ class DataService {
     async getTeacherSubjects(teacherId) {
         try {
             console.log(`Gọi API lấy môn học với teacherId: ${teacherId}`);
-            const url = `https://scoreapi-1zqy.onrender.com/ScoreTeachers/GetTeacherAllSubjectsTeach?id=${teacherId}`;
+            // Đảm bảo URL đúng - kiểm tra endpoint API
+            const url = `https://scoreapi-1zqy.onrender.com/DashboardTeachers/GetSubjectByTeacherId?id=${teacherId}`;
             console.log('URL API:', url);
             
             const response = await fetch(url);

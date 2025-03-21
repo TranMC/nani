@@ -76,11 +76,16 @@
     <script src="js/teacher-navigation.js"></script>
 
     <script>
+        // Biến toàn cục để theo dõi
+        window.APP_DEBUG = true;
+        
         document.addEventListener('DOMContentLoaded', () => {
             const user = getCurrentUser();
             if (!user || user.role !== 'teacher') {
                 window.location.href = 'login.html';
             }
+            
+            console.log('Khởi tạo TeacherNavigation...');
             window.navigationInstance = new TeacherNavigation();
             
             // Xử lý menu trên thiết bị di động
@@ -119,11 +124,13 @@
             });
             
             // Đảm bảo thông tin vai trò được hiển thị sau khi trang tải xong
+            console.log('Đợi 1 giây trước khi hiển thị thông tin giáo viên...');
             setTimeout(() => {
                 if (window.navigationInstance) {
+                    console.log('Gọi displayTeacherName...');
                     window.navigationInstance.displayTeacherName();
                 }
-            }, 500);
+            }, 1000);
         });
     </script>
 </body>

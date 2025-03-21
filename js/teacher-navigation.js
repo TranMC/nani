@@ -1,6 +1,8 @@
 class TeacherNavigation {
     constructor() {
         this.currentPage = 'dashboard';
+        this.dataService = new DataService('https://scoreapi-1zqy.onrender.com');
+        
         // Đảm bảo DOM đã tải xong trước khi gọi các phương thức hiển thị
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
@@ -53,6 +55,8 @@ class TeacherNavigation {
         switch(page) {
             case 'dashboard':
                 new TeacherDashboard();
+                // Đảm bảo môn học được hiển thị khi vào dashboard
+                setTimeout(() => this.displayTeacherName(), 500);
                 break;
             case 'scores':
                 new TeacherScores();
@@ -104,36 +108,28 @@ class TeacherNavigation {
             roleElement.className = 'teacher-role';
             teacherNameElement.appendChild(roleElement);
             
-            console.log('Đã tạo lại các phần tử DOM:', { 
-                teacherNameElement, 
-                fullnameElement, 
-                roleElement 
-            });
-            
             // Cập nhật tên giáo viên
             fullnameElement.textContent = `${teacher.lastName} ${teacher.firstName}`;
-            console.log('Đã cập nhật tên giáo viên:', fullnameElement.textContent);
             
-            // Cập nhật vai trò và môn học giáo viên 
             // Xác định môn học mặc định từ dữ liệu hiện có
             let subjectName = teacher.subjectName || "Math";
-            console.log('Môn học từ session storage:', subjectName);
             
             // Kiểm tra xem có ID giáo viên không
             if (teacher.teacherId) {
                 try {
                     console.log('Bắt đầu gọi API lấy danh sách môn học...');
-                    // Khởi tạo DataService để lấy thông tin môn học
-                    const dataService = new DataService('https://scoreapi-1zqy.onrender.com');
                     console.log('Teacher ID:', teacher.teacherId);
-                    const subjectsData = await dataService.getTeacherSubjects(teacher.teacherId);
+                    
+                    // Sử dụng dataService đã được khởi tạo trong constructor
+                    const subjectsData = await this.dataService.getTeacherSubjects(teacher.teacherId);
                     console.log('Dữ liệu môn học nhận được:', subjectsData);
                     
                     // Kiểm tra dữ liệu trả về và lấy tên môn học
                     if (subjectsData && Array.isArray(subjectsData) && subjectsData.length > 0) {
                         // Lấy môn học đầu tiên nếu có dữ liệu
-                        if (subjectsData[0].subjectName) {
-                            subjectName = subjectsData[0].subjectName;
+                        const subject = subjectsData[0];
+                        if (subject && subject.subjectName) {
+                            subjectName = subject.subjectName;
                             console.log('Tìm thấy môn học:', subjectName);
                             
                             // Cập nhật thông tin giáo viên trong session storage
@@ -148,13 +144,10 @@ class TeacherNavigation {
                 } catch (error) {
                     console.error('Lỗi khi lấy thông tin môn học:', error);
                 }
-            } else {
-                console.warn('Không tìm thấy teacherId trong thông tin giáo viên');
             }
             
             // Hiển thị vai trò và môn học (dù có lỗi hay không)
             roleElement.textContent = `${subjectName} Teacher`;
-            console.log('Đã cập nhật vai trò thành:', `${subjectName} Teacher`);
         } else {
             console.error('Không tìm thấy thông tin giáo viên hoặc phần tử DOM');
         }
