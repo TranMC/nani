@@ -359,7 +359,14 @@ class AdminDashboard {
                     this.openStudentModal(studentId);
                 } else if (target.classList.contains('btn-delete')) {
                     console.log('Delete student:', studentId);
-                    this.deleteStudent(studentId);
+                    // Lấy thông tin sinh viên từ row
+                    const row = target.closest('tr');
+                    const studentName = row.querySelector('td:nth-child(2)')?.textContent || 'Unknown Student';
+                    const student = {
+                        studentId: studentId,
+                        fullName: studentName
+                    };
+                    this.deleteStudent(student);
                 }
                 
                 // Ngăn sự kiện lan ra
@@ -570,38 +577,22 @@ class AdminDashboard {
     }
     
     
-    async deleteStudent(studentId) {
-        console.log('deleteStudent called for ID:', studentId);
-        
+    async deleteStudent(student) {
         try {
-            // Đảm bảo rằng popup đã được tạo
-            this.ensurePopupsExist();
-            
-            // Đợi một chút để đảm bảo DOM đã được cập nhật
-            await new Promise(resolve => setTimeout(resolve, 50));
-            
-            // Sử dụng phương thức hiển thị popup mạnh hơn
-            this.forceShowConfirmation(
+            this.showConfirmation(
                 'Xác nhận xóa học sinh',
                 'Bạn có chắc chắn muốn xóa học sinh này không? Dữ liệu không thể khôi phục sau khi xóa.',
                 async () => {
-                    console.log('Xác nhận xóa học sinh với ID:', studentId);
                     try {
-                        console.log('Bắt đầu gọi API xóa học sinh');
-                        await this.deleteStudentRequest(studentId);
-                        console.log('API xóa học sinh thành công');
-                        
-                        // Cập nhật danh sách học sinh
+                        await this.deleteStudentRequest(student.studentId);
                         await this.loadStudents();
-                        
-                        // Hiển thị thông báo thành công
                         this.showNotification(
                             'success',
                             'Xóa học sinh thành công',
                             'Học sinh đã được xóa khỏi hệ thống.'
                         );
                     } catch (error) {
-                        console.error('Lỗi chi tiết khi xóa học sinh:', error);
+                        console.error('Error deleting student:', error);
                         this.showNotification(
                             'error',
                             'Lỗi xóa học sinh',
@@ -610,25 +601,8 @@ class AdminDashboard {
                     }
                 }
             );
-            
-            // Kiểm tra trạng thái popup sau khi hiển thị
-            setTimeout(() => {
-                this.checkPopupStatus();
-            }, 100);
-            
         } catch (error) {
-            console.error('Lỗi trong phương thức deleteStudent:', error);
-            // Sử dụng xác nhận thông thường nếu có lỗi với popup
-            if (window.confirm('Bạn có chắc chắn muốn xóa học sinh này không? Dữ liệu không thể khôi phục sau khi xóa.')) {
-                try {
-                    await this.deleteStudentRequest(studentId);
-                    await this.loadStudents();
-                    alert('Xóa học sinh thành công!');
-                } catch (error) {
-                    console.error('Lỗi khi xóa học sinh (fallback):', error);
-                    alert('Lỗi xóa học sinh. Vui lòng thử lại sau.');
-                }
-            }
+            console.error('Error in deleteStudent method:', error);
         }
     }
 
@@ -2427,23 +2401,10 @@ class AdminDashboard {
             const confirmCallback = async () => {
                 try {
                     this.showLoader();
-                    const response = await fetch(`${this.apiBaseUrl}/DeleteStudent?id=${studentId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${this.authToken}`
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        this.hideLoader();
-                        this.showNotification("Thành công", `Đã xóa sinh viên ${studentName} thành công`, "success");
-                        this.loadStudents(); // Tải lại danh sách
-                    } else {
-                        const errorData = await response.json();
-                        this.hideLoader();
-                        this.showNotification("Lỗi", `Không thể xóa sinh viên: ${errorData.message || 'Lỗi không xác định'}`, "error");
-                    }
+                    await this.deleteStudentRequest(studentId);
+                    this.hideLoader();
+                    this.showNotification("Thành công", `Đã xóa sinh viên ${studentName} thành công`, "success");
+                    this.loadStudents(); // Tải lại danh sách
                 } catch (error) {
                     console.error("Error deleting student:", error);
                     this.hideLoader();
@@ -2456,6 +2417,199 @@ class AdminDashboard {
         } catch (error) {
             console.error("Error in deleteStudent method:", error);
             this.showNotification("Lỗi hệ thống", "Đã xảy ra lỗi không mong muốn", "error");
+        }
+    }
+
+    // Thêm phương thức deleteStudentRequest
+    async deleteStudentRequest(studentId) {
+        const response = await fetch(`${this.apiBaseUrl}/DeleteStudent?id=${studentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.authToken}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Lỗi không xác định');
+        }
+        
+        return await response.json();
+    }
+
+    // Phương thức hiển thị popup trực tiếp không thông qua animation
+    forceShowConfirmation(title, message, confirmCallback, cancelCallback = null, iconType = "warning") {
+        try {
+            // Lấy các phần tử DOM
+            const popupContainer = document.querySelector('.popup-container');
+            const popup = document.querySelector('.popup.confirmation');
+            
+            if (!popupContainer || !popup) {
+                console.error("Popup elements not found");
+                return;
+            }
+            
+            // Cập nhật nội dung popup
+            const popupTitle = popup.querySelector('.popup-title');
+            const popupMessage = popup.querySelector('.popup-message');
+            const popupIcon = popup.querySelector('.popup-icon') || document.createElement('i');
+            
+            // Nếu không có sẵn biểu tượng, thêm vào
+            if (!popup.querySelector('.popup-icon')) {
+                popupIcon.className = 'popup-icon fa fa-exclamation-triangle';
+                popup.insertBefore(popupIcon, popupTitle);
+            }
+            
+            // Thêm lớp kiểu cho biểu tượng (success, error, warning, info)
+            popupIcon.className = 'popup-icon fa fa-exclamation-triangle ' + iconType;
+            
+            if (popupTitle) popupTitle.textContent = title;
+            if (popupMessage) popupMessage.innerHTML = message;
+            
+            // Xóa tất cả event listeners hiện có trên các nút bằng cách thay thế
+            const btnContainer = popup.querySelector('.popup-actions');
+            const oldBtnConfirm = popup.querySelector('.popup-btn.confirm');
+            const oldBtnCancel = popup.querySelector('.popup-btn.cancel');
+            
+            // Tạo nút mới để thay thế
+            const newBtnConfirm = document.createElement('button');
+            newBtnConfirm.className = 'popup-btn confirm';
+            newBtnConfirm.textContent = 'Xác nhận';
+            
+            const newBtnCancel = document.createElement('button');
+            newBtnCancel.className = 'popup-btn cancel';
+            newBtnCancel.textContent = 'Hủy';
+            
+            // Thay thế các nút cũ
+            if (oldBtnConfirm && oldBtnCancel && btnContainer) {
+                btnContainer.replaceChild(newBtnConfirm, oldBtnConfirm);
+                btnContainer.replaceChild(newBtnCancel, oldBtnCancel);
+                
+                // Thêm event listener mới
+                newBtnConfirm.addEventListener('click', () => {
+                    this.hideConfirmation();
+                    if (typeof confirmCallback === 'function') {
+                        confirmCallback();
+                    }
+                });
+                
+                newBtnCancel.addEventListener('click', () => {
+                    this.hideConfirmation();
+                    if (typeof cancelCallback === 'function') {
+                        cancelCallback();
+                    }
+                });
+            } else {
+                console.error("Buttons not found in popup");
+                return;
+            }
+            
+            // Trước khi hiển thị, đảm bảo popup không hiển thị
+            // Ngăn chặn việc tự động kích hoạt các button
+            popup.classList.remove('show', 'active');
+            popup.style.display = 'none';
+            popup.style.opacity = '0';
+            popup.style.visibility = 'hidden';
+            
+            // Đảm bảo container cũng đã ẩn
+            popupContainer.style.display = 'none';
+            popupContainer.style.opacity = '0';
+            popupContainer.style.visibility = 'hidden';
+            
+            // Hiển thị popup sau một khoảng thời gian ngắn
+            setTimeout(() => {
+                // Hiển thị container
+                popupContainer.style.display = 'flex';
+                popupContainer.style.opacity = '1';
+                popupContainer.style.visibility = 'visible';
+                
+                // Hiển thị popup
+                popup.style.display = 'block';
+                popup.style.opacity = '1';
+                popup.style.visibility = 'visible';
+                popup.classList.add('show', 'active');
+                
+                console.log("Popup shown successfully");
+            }, 100);
+            
+        } catch (error) {
+            console.error("Error showing confirmation:", error);
+        }
+    }
+
+    // Kiểm tra và đảm bảo những popup cần thiết đã tồn tại trong DOM
+    ensurePopupsExist() {
+        // Kiểm tra popup container
+        if (!document.querySelector('.popup-container')) {
+            console.warn("Popup container not found, no action needed as it's already in HTML");
+        }
+        
+        // Kiểm tra các popup cụ thể
+        if (!document.querySelector('.popup.confirmation') || !document.querySelector('.popup.notification')) {
+            console.warn("Popup elements not found, but should be present in HTML");
+        }
+    }
+
+    // Hiển thị loader
+    showLoader() {
+        const loaderHtml = `
+            <div id="app-loader" style="position:fixed; top:0; left:0; width:100%; height:100%; 
+            background:rgba(0,0,0,0.5); z-index:9999; display:flex; justify-content:center; align-items:center;">
+                <div style="width:60px; height:60px; border:6px solid rgba(255,255,255,0.3); 
+                border-radius:50%; border-top-color:#fff; animation:spin 1s linear infinite;"></div>
+            </div>
+        `;
+        
+        // Chỉ thêm loader nếu chưa tồn tại
+        if (!document.getElementById('app-loader')) {
+            document.body.insertAdjacentHTML('beforeend', loaderHtml);
+            
+            // Thêm animation keyframes nếu chưa tồn tại
+            if (!document.getElementById('loader-style')) {
+                const styleTag = document.createElement('style');
+                styleTag.id = 'loader-style';
+                styleTag.textContent = `
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                `;
+                document.head.appendChild(styleTag);
+            }
+        }
+    }
+
+    // Ẩn loader
+    hideLoader() {
+        const loader = document.getElementById('app-loader');
+        if (loader) {
+            loader.remove();
+        }
+    }
+
+    // Thêm phương thức checkPopupStatus
+    checkPopupStatus() {
+        const confirmationPopup = document.querySelector('.popup.confirmation');
+        if (confirmationPopup) {
+            console.log('Confirmation popup status:', {
+                display: confirmationPopup.style.display,
+                opacity: confirmationPopup.style.opacity,
+                visibility: confirmationPopup.style.visibility
+            });
+        } else {
+            console.log('Confirmation popup not found');
+        }
+
+        const notificationPopup = document.querySelector('.popup.notification');
+        if (notificationPopup) {
+            console.log('Notification popup status:', {
+                display: notificationPopup.style.display,
+                opacity: notificationPopup.style.opacity,
+                visibility: notificationPopup.style.visibility
+            });
+        } else {
+            console.log('Notification popup not found');
         }
     }
 }
