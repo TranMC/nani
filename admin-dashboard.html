@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- <style>
+        //Responsive styles for mobile
+        @media (max-width: 768px) {
+            .dashboard {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                position: fixed;
+                left: -290px;
+                top: 0;
+                height: 100%;
+                z-index: 1000;
+                transition: left 0.3s ease;
+                box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .main-content {
+                width: 100%;
+                margin-left: 0;
+            }
+            
+            .topbar {
+                justify-content: space-between;
+                padding: 10px 15px;
+            }
+            
+            .menu-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: none;
+                border: none;
+                color: #333;
+                font-size: 24px;
+                cursor: pointer;
+            }
+            
+            .overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+            }
+            
+            .overlay.active {
+                display: block;
+            }
+            
+            /* Adjust tables for mobile */
+            .table-container {
+                overflow-x: auto;
+            }
+            
+            /* Adjust cards for mobile */
+            .stats-grid, .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Adjust forms for mobile */
+            .modal-dialog {
+                width: 95%;
+                max-width: 95%;
+            }
+            
+            /* Ẩn text trên nút đăng xuất, chỉ hiện icon */
+            .btn-logout span {
+                display: none;
+            }
+        }
+        
+        /* Notification và Confirmation Popup Styles */
+        .popup-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .popup-container.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .popup {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            padding: 25px;
+            text-align: center;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+        
+        .popup-container.show .popup {
+            transform: translateY(0);
+        }
+        
+        .popup-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .popup-icon.success {
+            color: #22c55e;
+        }
+        
+        .popup-icon.error {
+            color: #ef4444;
+        }
+        
+        .popup-icon.warning {
+            color: #f59e0b;
+        }
+        
+        .popup-icon.info {
+            color: #3b82f6;
+        }
+        
+        .popup-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+        
+        .popup-message {
+            color: #6b7280;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .popup-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .popup-btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+        
+        .popup-btn-confirm {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .popup-btn-confirm:hover {
+            background-color: #2563eb;
+        }
+        
+        .popup-btn-cancel {
+            background-color: #e5e7eb;
+            color: #4b5563;
+        }
+        
+        .popup-btn-cancel:hover {
+            background-color: #d1d5db;
+        }
+        
+        .popup-btn-ok {
+            background-color: #3b82f6;
+            color: white;
+            min-width: 100px;
+        }
+        
+        .popup-btn-ok:hover {
+            background-color: #2563eb;
+        }
+        
+        /* Animation for popup */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .popup {
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        @media (max-width: 640px) {
+            .popup {
+                width: 90%;
+                padding: 20px;
+            }
+            
+            .popup-icon {
+                font-size: 36px;
+            }
+            
+            .popup-title {
+                font-size: 18px;
+            }
+        }
+    </style> -->
+</head>
+<body>
+    <!-- Hiệu ứng hạt nền -->
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Hiệu ứng ánh sáng -->
+    <div class="light-effect"></div>
+    <div class="light-effect"></div>
+    <div class="light-effect"></div>
+
+    <div class="overlay" id="sidebarOverlay"></div>
+    <div class="dashboard">
+        <div class="sidebar" id="sidebar">
+            <div class="logo">
+                <h2>Admin Dashboard</h2>
+            </div>
+            <ul>
+                <li data-page="dashboard" class="active">
+                    <i class="fas fa-home"></i> Tổng quan
+                </li>
+                <li data-page="students">
+                    <i class="fas fa-user-graduate"></i> Quản lý học sinh
+                </li>
+                <li data-page="teachers">
+                    <i class="fas fa-chalkboard-teacher"></i> Quản lý giáo viên
+                </li>
+                <li data-page="cohorts">
+                    <i class="fas fa-school"></i> Quản lý lớp học
+                </li>
+                <li data-page="subjects">
+                    <i class="fas fa-book"></i> Quản lý môn học
+                </li>
+                <li data-page="assignments">
+                    <i class="fas fa-tasks"></i> Phân công giảng dạy
+                </li>
+            </ul>
+        </div>
+        <div class="main-content">
+            <div class="topbar">
+                <button id="menuToggle" class="menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="user-info">
+                    <span>Admin</span>
+                    <button onclick="logout()" class="btn-logout">
+                        <i class="fas fa-sign-out-alt"></i> <span>Đăng xuất</span>
+                    </button>
+                </div>
+            </div>
+            <div id="pageContent"></div>
+        </div>
+    </div>
+    
+    <!-- Popup Container -->
+    <div class="popup-container">
+        <!-- Confirmation Popup -->
+        <div class="popup confirmation">
+            <i class="popup-icon fa fa-exclamation-triangle warning"></i>
+            <h3 class="popup-title">Xác nhận</h3>
+            <div class="popup-message">Bạn có chắc chắn muốn thực hiện hành động này không?</div>
+            <div class="popup-actions">
+                <button class="popup-btn cancel">Hủy</button>
+                <button class="popup-btn confirm">Xác nhận</button>
+            </div>
+        </div>
+        
+        <!-- Notification Popup -->
+        <div class="popup notification">
+            <i class="popup-icon fa fa-info-circle info"></i>
+            <h3 class="popup-title">Thông báo</h3>
+            <div class="popup-message">Thao tác đã hoàn tất thành công.</div>
+            <div class="popup-actions">
+                <button class="popup-btn ok">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/admin.js"></script>
+    <script>
+        // Kiểm tra quyền admin
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = getCurrentUser();
+            if (!user || user.role !== 'admin') {
+                window.location.href = 'login.html';
+            }
+            
+            // Khởi tạo sự kiện đóng modal khi click ra ngoài
+            adminDashboard.setupModalOutsideClick();
+            
+            // Mobile sidebar toggle
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            });
+            
+            // Close sidebar when clicking on overlay
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            });
+            
+            // Close sidebar when clicking on menu items (on mobile)
+            const menuItems = document.querySelectorAll('.sidebar li');
+            menuItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('open');
+                        overlay.classList.remove('active');
+                    }
+                });
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+
+        // Mobile sidebar toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get elements
+            const menuToggle = document.getElementById('menuToggle');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            
+            // Toggle sidebar on menu button click
+            if (menuToggle) {
+                menuToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('open');
+                    overlay.classList.toggle('active');
+                });
+            }
+            
+            // Close sidebar when clicking on overlay
+            if (overlay) {
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                });
+            }
+            
+            // Close sidebar when clicking menu items (mobile only)
+            const menuItems = document.querySelectorAll('.sidebar li');
+            menuItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('open');
+                        overlay.classList.remove('active');
+                    }
+                });
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+
+        // Add this to the existing scripts to fix mobile viewport height issues
+        function setMobileHeight() {
+            // Fix for mobile viewport height
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+
+        // Run on load and resize
+        window.addEventListener('DOMContentLoaded', setMobileHeight);
+        window.addEventListener('resize', setMobileHeight);
+        
+        // Ensure proper scrolling after sidebar actions
+        document.addEventListener('click', function(e) {
+            // If clicking mobile menu toggle or overlay
+            if (e.target.id === 'menuToggle' || 
+                e.target.closest('#menuToggle') || 
+                e.target.id === 'sidebarOverlay') {
+                
+                // Short delay to ensure transition completes
+                setTimeout(function() {
+                    window.scrollTo(0, window.scrollY);
+                }, 350);
+            }
+        });
+    </script>
+</body>
+</html>

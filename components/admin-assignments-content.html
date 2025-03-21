@@ -1,0 +1,96 @@
+<div class="assignments-management">
+    <div class="actions-bar">
+        <button id="addAssignmentBtn" class="btn-add">
+            <i class="fas fa-plus"></i> Thêm phân công
+        </button>
+        <div class="search-box">
+            <input type="text" id="searchAssignment" placeholder="Tìm kiếm phân công...">
+            <i class="fas fa-search"></i>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-tasks"></i> Danh sách phân công giảng dạy</h3>
+        </div>
+        <div class="table-container">
+            <table id="assignmentTable">
+                <thead>
+                    <tr>
+                        <th>Giáo viên</th>
+                        <th>Môn học</th>
+                        <th>Lớp học</th>
+                        <th>Ngày bắt đầu dạy</th>
+                        <th>Phòng dạy</th>
+                        <th>Thời gian bắt đầu</th>
+                        <th>Thời gian kết thúc</th>
+                        <th>Thứ</th>
+            
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal thêm/sửa phân công -->
+    <div id="assignmentModal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Thông tin phân công</h3>
+                    <button type="button" class="modal-close" onclick="adminDashboard.closeModal('assignmentModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="assignmentForm">
+                        <input type="hidden" name="lessonClassId">
+                        <div class="form-group">
+                            <label>Giáo viên</label>
+                            <select name="teacherId" required>
+                                <!-- Options sẽ được thêm động từ JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Môn học</label>
+                            <select name="subjectId" required>
+                          
+                                <!-- Options sẽ được thêm động từ JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lớp học</label>
+                            <select name="cohortId" required>
+                          
+                                <!-- Options sẽ được thêm động từ JS -->
+                            </select>
+                        </div>    
+                      
+                        <div class="form-group">
+                            <label>Ngày bắt đầu dạy </label>
+                            <input type="date" name="startDay" required >
+                        </div>
+                        <div class="form-group">
+                            <label>Phòng dạy</label>
+                            <input type="text" name="location" required placeholder="VD: Phòng 101">
+                        </div>
+                        <div class="form-group">
+                            <label>Thời gian bắt đầu </label>
+                            <input type="time" name="startTime" required placeholder="HH:MM:SS" step="1"`>
+                        </div>
+                        <div class="form-group">
+                            <label>Thời gian kết thúc</label>
+                            <input type="time" name="endTime" required placeholder="HH:MM:SS" step="1">
+                        </div>
+                     
+                       
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="adminDashboard.closeModal('assignmentModal')">Hủy</button>
+                    <button type="submit" form="assignmentForm" class="btn-add">Lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 
